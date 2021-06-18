@@ -46,23 +46,24 @@ metrics <- metric_set(rmse)
 
 lreg_spec  <- recipe(profit ~ ., data = train) %>%
   update_role(id, new_role = "id") %>%
-  step_select(-country) %>%
   step_novel(all_nominal_predictors()) %>%
   step_other(city, state, sub_category, postal_code) %>%
   step_naomit(all_predictors())
 
 rf_spec <- recipe(profit ~ ., data = train) %>%
   update_role(id, new_role = "id") %>%
-  step_select(-country) %>%
-  step_novel(all_nominal_predictors(), new_level = "new") %>%
+  step_novel(all_nominal(), new_level = "new") %>%
+  step_zv(all_predictors()) %>%
   step_other(city, state, sub_category, postal_code) 
 
 xgb_spec <- recipe(profit ~ ., data = train) %>%
   update_role(id, new_role = "id") %>%
-  step_select(-country) %>%
-  step_novel(all_nominal_predictors()) %>%
+  update_role(all_nominal(), new_role = "id") %>%
+  step_novel(all_nominal()) %>%
+  step_zv(all_predictors()) %>%
   step_other(city, state, sub_category, postal_code) %>%
-  step_dummy(all_nominal_predictors())
+  step_dummy(all_nominal())
+
 
 linear_reg <- linear_reg(penalty = tune(), mixture = tune()) %>%
   set_engine("glmnet") %>%
@@ -76,7 +77,7 @@ xgb_mod <-
   boost_tree(
     trees = 1000, 
     tree_depth = tune(), min_n = tune(), 
-    loss_reduction = tune(),                     ## first three: model complexity
+    loss_reduction = tune(),      ÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷/               ## first three: model complexity
     sample_size = tune(), mtry = tune(),         ## randomness
     learn_rate = tune(),                         ## step size
   ) %>% 
@@ -121,6 +122,10 @@ grid_results <-
 
 # Final Fits --------------------------------------------------------------
 
+grid_results %>%
+  autoplot()
+  
+
 best_results <- 
   grid_results %>% 
   pull_workflow_set_result("rf_spec_rf") %>% 
@@ -132,9 +137,16 @@ boosting_test_results <-
   finalize_workflow(best_results) %>% 
   last_fit(split = split) 
 
+boosting_test_results %>%
+  collect_metrics("rmse")
+
 hopreds <- predict(boosting_test_results$.workflow[[1]], holdout)
 
-hopreds %>%
+hopreds 
+
+holdout %>%
+  select(id) %>%
+  mutate(profit = hopreds$.pred) %>%
   write_csv(here::here("01_pred_2021_06_15.csv"))
 
 
