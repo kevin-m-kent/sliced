@@ -71,7 +71,7 @@ recp_1g <- recipe(TotalViews ~ ., data = train) %>%
   update_role(Id, new_role = "Id") %>%
   step_mutate(Title = tolower(Title), Subtitle = tolower(Subtitle), Name = tolower(Name)) %>%
   step_tokenize(Title, Subtitle, Name, token = "ngrams", options = list(n = 1, 
-                                                                        ngram_delim = "_")) %>%
+                                                                        ngram_delim = " ")) %>%
   step_stopwords(Title, Subtitle, Name) %>%
   step_tokenfilter(Title, Subtitle, Name) %>%
   step_lda(Title, Subtitle, Name) 
@@ -81,7 +81,7 @@ recp_2g <- recipe(TotalViews ~ ., data = train) %>%
   update_role(Id, new_role = "Id") %>%
   step_mutate(Title = tolower(Title), Subtitle = tolower(Subtitle), Name = tolower(Name)) %>%
   step_tokenize(Title, Subtitle, Name, token = "ngrams", options = list(n = 2, 
-                                                       ngram_delim = "_")) %>%
+                                                       ngram_delim = " ")) %>%
   step_stopwords(Title, Subtitle, Name) %>%
   step_tokenfilter(Title, Subtitle, Name) %>%
   step_lda(Title, Subtitle, Name) 
@@ -142,8 +142,8 @@ final_mod <-
 hopreds <- predict(final_mod$.workflow[[1]], holdout)
 
 holdout %>%
-  select(id) %>%
-  mutate(profit = hopreds$.pred) %>%
+  select(Id) %>%
+  mutate(TotalViews = hopreds$.pred) %>%
   write_csv(here::here(glue("01_pred_{episode}.csv")))
 
 
