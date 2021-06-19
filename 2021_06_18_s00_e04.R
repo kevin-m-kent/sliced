@@ -18,6 +18,8 @@ doParallel::registerDoParallel(cores = 6)
 
 # Reading Data ---------------------------------------------------------------------
 
+#https://www.kaggle.com/c/sliced-s00e04/overview
+
 episode <- "s00e04"
 
 raw_data <- read_csv(here::here("Raw_Data", glue("sliced-{episode}"),  glue("{episode}-sliced_data.csv"))) 
@@ -80,7 +82,7 @@ num_topics <- function(range = c(1L, 20L), trans = NULL) {
 tunable.step_lda <- function(x, ...) {
   tibble::tibble(
     name = c("num_topics"),
-    call_info = list(list(pkg = NULL, fun = "num_topics")),
+    call_info = list(list(pkg = NULL, fun = "num_topics", range = c(1L, 20L))),
     source = "preproc",
     component = "step_lda",
     component_id = "main"
@@ -106,7 +108,9 @@ recp_2g <- recipe(TotalViews ~ ., data = train) %>%
                                                        ngram_delim = " ")) %>%
   step_stopwords(Title, Subtitle, Name) %>%
   step_tokenfilter(Title, Subtitle, Name) %>%
-  step_lda(Title, Subtitle, Name, num_topics = tune()) 
+  step_lda(Title, Subtitle, Name, num_topics = tune())
+
+
 
 randf <- rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>%
   set_engine("ranger") %>%
