@@ -64,6 +64,29 @@ train %>%
 
 metrics <- metric_set(rmse)
 
+# Custom Tunable Methods --------------------------------------------------
+
+num_topics <- function(range = c(1L, 20L), trans = NULL) {
+  new_quant_param(
+    type = "integer",
+    range = range,
+    inclusive = c(TRUE, TRUE),
+    trans = trans,
+    label = c(num_topics = "# LDA Topics"),
+    finalize = NULL
+  )
+}
+
+tunable.step_lda <- function(x, ...) {
+  tibble::tibble(
+    name = c("num_topics"),
+    call_info = list(list(pkg = NULL, fun = "num_topics")),
+    source = "preproc",
+    component = "step_lda",
+    component_id = "main"
+  )
+}
+
 
 # Model Setup -------------------------------------------------------------
 
@@ -74,8 +97,7 @@ recp_1g <- recipe(TotalViews ~ ., data = train) %>%
                                                                         ngram_delim = " ")) %>%
   step_stopwords(Title, Subtitle, Name) %>%
   step_tokenfilter(Title, Subtitle, Name) %>%
-  step_lda(Title, Subtitle, Name) 
-
+  step_lda(Title, Subtitle, Name, num_topics = tune()) 
 
 recp_2g <- recipe(TotalViews ~ ., data = train) %>%
   update_role(Id, new_role = "Id") %>%
@@ -84,23 +106,24 @@ recp_2g <- recipe(TotalViews ~ ., data = train) %>%
                                                        ngram_delim = " ")) %>%
   step_stopwords(Title, Subtitle, Name) %>%
   step_tokenfilter(Title, Subtitle, Name) %>%
-  step_lda(Title, Subtitle, Name) 
+  step_lda(Title, Subtitle, Name, num_topics = tune()) 
 
 randf <- rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>%
   set_engine("ranger") %>%
   set_mode("regression")
 
-rf_param <- 
+rf_param <-
   randf %>%
   parameters() %>%
-  update(mtry = mtry(c(1, 30)))
+  update(mtry = mtry(c(1, 30))) 
 
-wfset <-  workflow_set(preproc = list(one_gram = recp_1g, two_gram = recp_2g), models = list(randf = randf))
+wfset <-  workflow_set(preproc = list(one_gram = recp_1g, two_gram = recp_2g), 
+                       models = list(randf = randf))
 
 wfset <-
   wfset %>%
   option_add(param = rf_param, id = "one_gram_randf") %>%
-  option_add(param = rf_param, id = "two_gram_randf") 
+  option_add(param = rf_param, id = "two_gram_randf")
   
 
 # Model Training ----------------------------------------------------------
@@ -109,7 +132,7 @@ grid_ctrl <-
   control_grid(
     save_pred = TRUE,
     parallel_over = "everything",
-    save_workflow = TRUE
+    save_workflow = FALSE
   )
 
 grid_results <-
@@ -144,6 +167,6 @@ hopreds <- predict(final_mod$.workflow[[1]], holdout)
 holdout %>%
   select(Id) %>%
   mutate(TotalViews = hopreds$.pred) %>%
-  write_csv(here::here(glue("01_pred_{episode}.csv")))
+  write_csv(here::here(glue("02_pred_{episode}.csv")))
 
 
