@@ -118,6 +118,26 @@ rf_param <-
   parameters() %>%
   update(mtry = mtry(c(1, 30))) 
 
+# Simple Workflow ---------------------------------------------------------
+
+wflow <- workflow() %>%
+  add_recipe(recp_2g) %>%
+  add_model(randf) 
+
+cntrl <- control_grid(verbose = TRUE)
+
+test_grid <- tune_grid(
+  wflow,
+  resamples = folds,
+  grid  = crossing(mtry = seq(1, 10, by = 2), min_n = seq(1, 10, by = 2), num_topics = seq(1, 10, by =2)),
+  metrics = metrics,
+  param_info = rf_param,
+  control = cntrl
+)
+
+
+# Workflow Set ------------------------------------------------------------
+
 wfset <-  workflow_set(preproc = list(one_gram = recp_1g, two_gram = recp_2g), 
                        models = list(randf = randf))
 
