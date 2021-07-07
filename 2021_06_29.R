@@ -11,7 +11,8 @@ library(visdat)
 library(finetune)
 library(tidytext)
 library(textrecipes)
-source("step_isofor.R")
+library(here)
+#source("step_isofor.R")
 
 doParallel::registerDoParallel(cores = 6)
 
